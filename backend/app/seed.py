@@ -94,7 +94,7 @@ def seed():
                 "participants": ["Alice Johnson", "Bob Martinez", "Carol Lee", "David Kim"],
             },
             {
-                "title": "Client Demo — Acme Corp",
+                "title": "Client Demo - Acme Corp",
                 "description": "Product demonstration for Acme Corp stakeholders",
                 "started_at": now - timedelta(days=2, hours=5),
                 "ended_at": now - timedelta(days=2, hours=4),
@@ -110,7 +110,7 @@ def seed():
                 "participants": ["Grace Park", "Henry Scott", "Iris Nguyen", "James Liu", "Kate Brown"],
             },
             {
-                "title": "Onboarding — New Engineers",
+                "title": "Onboarding - New Engineers",
                 "description": "Onboarding session for the new engineering hires",
                 "started_at": now - timedelta(days=7, hours=4),
                 "ended_at": now - timedelta(days=7, hours=3),

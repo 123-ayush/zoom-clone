@@ -20,7 +20,6 @@ def _build_invite_link(meeting_id: str) -> str:
 def _participant_count(db: Session, meeting_db_id: int) -> int:
     return db.query(func.count(Participant.id)).filter(
         Participant.meeting_id == meeting_db_id,
-        Participant.left_at.is_(None),
     ).scalar() or 0
 
 
