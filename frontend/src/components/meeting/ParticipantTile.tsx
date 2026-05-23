@@ -40,39 +40,41 @@ export default function ParticipantTile({
           autoPlay
           muted={isSelf}
           playsInline
-          className={`w-full h-full object-cover ${isSelf && !isScreenSharing ? "scale-x-[-1]" : ""}`}
+          className={`w-full h-full object-cover ${isSelf && !isScreenSharing ? "-scale-x-100" : ""}`}
         />
       ) : (
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold"
+          className="size-12 xs:size-16 sm:size-20 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold"
           style={{ background: bg }}
         >
           {label}
         </div>
       )}
 
-      <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-        <span className="bg-black/50 text-white text-xs px-2 py-0.5 rounded font-medium">
+      {/* Name label with gradient backdrop */}
+      <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent px-2 pb-1.5 pt-4">
+        <span className="text-white text-[10px] xs:text-xs font-medium truncate block">
           {participant.display_name}
           {isSelf ? " (You)" : ""}
           {participant.role === "host" ? " · Host" : ""}
         </span>
       </div>
 
-      <div className="absolute top-2 right-2 flex items-center gap-1">
+      {/* Status indicators */}
+      <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
         {isScreenSharing && (
           <div className="bg-zoom-blue rounded-full p-1" title="Sharing screen">
-            <Monitor size={12} className="text-white" />
+            <Monitor size={10} className="text-white" />
           </div>
         )}
         {participant.is_muted && (
           <div className="bg-zoom-red rounded-full p-1" title="Muted">
-            <MicOff size={12} className="text-white" />
+            <MicOff size={10} className="text-white" />
           </div>
         )}
         {isVideoOff && (
           <div className="bg-black/50 rounded-full p-1" title="Video off">
-            <VideoOff size={12} className="text-white" />
+            <VideoOff size={10} className="text-white" />
           </div>
         )}
       </div>

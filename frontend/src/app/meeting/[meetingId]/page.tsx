@@ -188,8 +188,6 @@ export default function MeetingRoomPage() {
     );
   }
 
-  const sidePanelOpen = panel === "participants" || panel === "chat";
-
   return (
     <div className="min-h-screen bg-zoom-dark flex flex-col">
       {/* Top bar */}
@@ -242,9 +240,7 @@ export default function MeetingRoomPage() {
       )}
 
       {/* Video grid */}
-      <div
-        className={`flex flex-1 overflow-hidden ${sidePanelOpen ? "mr-80" : ""}`}
-      >
+      <div className="flex flex-1 overflow-hidden">
         <VideoGrid
           participants={participants}
           selfParticipantId={participantId}
@@ -275,25 +271,23 @@ export default function MeetingRoomPage() {
         onEndForAll={amHost ? handleEndForAll : undefined}
       />
 
-      {/* Panels */}
-      {panel === "participants" && (
-        <ParticipantsPanel
-          participants={participants}
-          isHost={amHost}
-          selfParticipantId={participantId}
-          onClose={() => setPanel("none")}
-          onMuteAll={handleMuteAll}
-          onRemove={handleRemoveParticipant}
-        />
-      )}
-      {panel === "chat" && (
-        <ChatPanel
-          messages={messages}
-          selfClientId={participantId}
-          onSend={sendMessage}
-          onClose={() => setPanel("none")}
-        />
-      )}
+      {/* Panels — Sheet portals; always mounted, open state drives visibility */}
+      <ParticipantsPanel
+        isOpen={panel === "participants"}
+        participants={participants}
+        isHost={amHost}
+        selfParticipantId={participantId}
+        onClose={() => setPanel("none")}
+        onMuteAll={handleMuteAll}
+        onRemove={handleRemoveParticipant}
+      />
+      <ChatPanel
+        isOpen={panel === "chat"}
+        messages={messages}
+        selfClientId={participantId}
+        onSend={sendMessage}
+        onClose={() => setPanel("none")}
+      />
       {panel === "whiteboard" && (
         <Whiteboard
           send={send}

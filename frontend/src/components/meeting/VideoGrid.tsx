@@ -14,10 +14,10 @@ interface Props {
 
 function gridClass(count: number): string {
   if (count <= 1) return "grid-cols-1";
-  if (count === 2) return "grid-cols-2";
+  if (count === 2) return "grid-cols-1 sm:grid-cols-2";
   if (count <= 4) return "grid-cols-2";
-  if (count <= 9) return "grid-cols-3";
-  return "grid-cols-4";
+  if (count <= 9) return "grid-cols-2 sm:grid-cols-3";
+  return "grid-cols-2 sm:grid-cols-4";
 }
 
 export default function VideoGrid({
@@ -28,7 +28,6 @@ export default function VideoGrid({
   isVideoOff,
   screenSharingClientId,
 }: Props) {
-  // Sort so the screen-sharer (if any) comes first.
   const ordered = [...participants].sort((a, b) => {
     if (a.id === screenSharingClientId) return -1;
     if (b.id === screenSharingClientId) return 1;
@@ -37,7 +36,7 @@ export default function VideoGrid({
 
   const count = ordered.length || 1;
   return (
-    <div className={`flex-1 p-3 grid gap-2 content-center ${gridClass(count)}`}>
+    <div className={`flex-1 p-2 sm:p-3 grid gap-2 content-center ${gridClass(count)}`}>
       {ordered.length === 0 ? (
         <div className="flex items-center justify-center text-white/40 text-sm">
           Waiting for participants…

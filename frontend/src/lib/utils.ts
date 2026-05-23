@@ -1,3 +1,10 @@
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 export function formatMeetingId(raw: string): string {
   const clean = raw.replace(/\D/g, "");
   if (clean.length <= 3) return clean;

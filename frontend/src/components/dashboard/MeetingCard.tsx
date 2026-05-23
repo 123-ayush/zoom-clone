@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { Users, Clock, Copy, Check, Video, Calendar } from "lucide-react";
 import type { Meeting } from "@/types";
 import { formatRelativeDate, formatDate, formatTime, formatDuration, copyToClipboard } from "@/lib/utils";
-import Badge from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { useState } from "react";
 
 interface Props {
@@ -63,7 +63,12 @@ export default function MeetingCard({ meeting, variant }: Props) {
       <div className="flex items-center gap-2 shrink-0 ml-4">
         {variant === "upcoming" && (
           <>
-            <Badge variant="blue">
+            <Badge
+              variant="outline"
+              className={meeting.status === "active"
+                ? "border-zoom-red/30 bg-zoom-red/10 text-zoom-red"
+                : "border-zoom-blue/30 bg-zoom-blue/10 text-zoom-blue"}
+            >
               {meeting.status === "active" ? "Live" : "Upcoming"}
             </Badge>
             <button

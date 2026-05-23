@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, HelpCircle, Settings } from "lucide-react";
 
-import Avatar from "@/components/ui/Avatar";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useUser } from "@/context/UserContext";
 import { getStoredName } from "@/lib/utils";
 
@@ -68,7 +68,7 @@ export default function Navbar() {
           <Bell size={20} />
         </button>
         <button className="ml-1" aria-label={displayName}>
-          <Avatar name={displayName} size={34} />
+          <UserAvatar name={displayName} size={34} />
         </button>
       </div>
     </header>

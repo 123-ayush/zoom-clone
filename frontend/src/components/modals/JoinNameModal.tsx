@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Avatar from "@/components/ui/Avatar";
+import UserAvatar from "@/components/ui/UserAvatar";
 import Spinner from "@/components/ui/Spinner";
 import { getStoredName } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ export default function JoinNameModal({
         )}
 
         <div className="flex flex-col items-center gap-3 py-4 border-y border-zoom-border mb-4">
-          <Avatar name={name || "?"} size={64} />
+          <UserAvatar name={name || "?"} size={64} />
           <p className="text-sm text-zoom-muted">Your preview</p>
         </div>
 
