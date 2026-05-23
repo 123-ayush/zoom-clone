@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Video } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatMeetingId } from "@/lib/utils";
+import { formatMeetingId, setStoredName } from "@/lib/utils";
 import JoinNameModal from "@/components/modals/JoinNameModal";
 import type { Meeting } from "@/types";
 
@@ -45,6 +45,7 @@ export default function JoinPage() {
     setJoining(true);
     try {
       const res = await api.joinMeeting(foundMeeting.meeting_id, displayName);
+      setStoredName(displayName);
       router.push(`/meeting/${foundMeeting.meeting_id}?pid=${res.participant.id}`);
     } catch {
       setJoining(false);

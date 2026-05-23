@@ -16,7 +16,7 @@ import { useRecording } from "@/hooks/useRecording";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { api } from "@/lib/api";
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard, setStoredName } from "@/lib/utils";
 import { buildMeetingWsUrl } from "@/lib/ws";
 
 type Panel = "none" | "participants" | "chat" | "whiteboard";
@@ -114,6 +114,7 @@ export default function MeetingRoomPage() {
     setJoinError("");
     try {
       const res = await api.joinMeeting(meetingId, displayName);
+      setStoredName(displayName);
       setParticipantId(res.participant.id);
       setShowJoinModal(false);
     } catch (e) {

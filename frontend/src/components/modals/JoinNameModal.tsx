@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import Spinner from "@/components/ui/Spinner";
-import { useUser } from "@/context/UserContext";
+import { getStoredName } from "@/lib/utils";
 
 interface Props {
   meetingId: string;
@@ -19,8 +19,7 @@ export default function JoinNameModal({
   onJoin,
   loading,
 }: Props) {
-  const user = useUser();
-  const [name, setName] = useState(user.name);
+  const [name, setName] = useState(() => getStoredName());
 
   if (!isOpen) return null;
 

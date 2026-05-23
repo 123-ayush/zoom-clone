@@ -4,6 +4,8 @@ import { CalendarPlus, Film, UserPlus, Video } from "lucide-react";
 import { api } from "@/lib/api";
 import { useState } from "react";
 import Spinner from "@/components/ui/Spinner";
+import JoinNameModal from "@/components/modals/JoinNameModal";
+import { getStoredName, setStoredName } from "@/lib/utils";
 
 interface Action {
   icon: React.ReactNode;
@@ -17,11 +19,23 @@ interface Action {
 export default function QuickActions() {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
 
-  const handleNewMeeting = async () => {
+  const handleNewMeeting = () => {
+    const stored = getStoredName();
+    if (!stored) {
+      setShowNamePrompt(true);
+      return;
+    }
+    void _createMeeting(stored);
+  };
+
+  const _createMeeting = async (displayName: string) => {
+    setShowNamePrompt(false);
+    setStoredName(displayName);
     setCreating(true);
     try {
-      const res = await api.createInstantMeeting();
+      const res = await api.createInstantMeeting(displayName);
       router.push(
         `/meeting/${res.meeting.meeting_id}?host=1&pid=${res.participant.id}`
       );
@@ -80,6 +94,13 @@ export default function QuickActions() {
           </button>
         ))}
       </div>
+      <JoinNameModal
+        meetingId=""
+        meetingTitle="New Meeting"
+        isOpen={showNamePrompt}
+        onJoin={_createMeeting}
+        loading={creating}
+      />
     </div>
   );
 }

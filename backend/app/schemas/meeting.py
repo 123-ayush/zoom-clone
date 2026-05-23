@@ -96,3 +96,9 @@ class MuteVideoRequest(BaseModel):
 
 class MuteAllRequest(BaseModel):
     is_muted: bool = True
+
+
+class CreateInstantMeetingRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    display_name: str | None = Field(default=None, min_length=1, max_length=100)

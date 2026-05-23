@@ -38,8 +38,11 @@ export const api = {
   getMeeting: (meetingId: string) =>
     request<Meeting>(`/api/meetings/${meetingId}`),
 
-  createInstantMeeting: () =>
-    request<JoinMeetingResponse>("/api/meetings/instant", { method: "POST" }),
+  createInstantMeeting: (displayName?: string) =>
+    request<JoinMeetingResponse>("/api/meetings/instant", {
+      method: "POST",
+      body: displayName ? JSON.stringify({ display_name: displayName }) : undefined,
+    }),
 
   scheduleMeeting: (data: {
     title: string;

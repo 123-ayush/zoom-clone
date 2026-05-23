@@ -5,6 +5,7 @@ import { Bell, HelpCircle, Settings } from "lucide-react";
 
 import Avatar from "@/components/ui/Avatar";
 import { useUser } from "@/context/UserContext";
+import { getStoredName } from "@/lib/utils";
 
 const NAV_ITEMS: { label: string; href: string }[] = [
   { label: "Home", href: "/" },
@@ -14,6 +15,7 @@ const NAV_ITEMS: { label: string; href: string }[] = [
 export default function Navbar() {
   const user = useUser();
   const pathname = usePathname();
+  const displayName = getStoredName() || user.name;
 
   return (
     <header className="bg-white border-b border-zoom-border h-14 flex items-center px-6 shrink-0">
@@ -65,8 +67,8 @@ export default function Navbar() {
         >
           <Bell size={20} />
         </button>
-        <button className="ml-1" aria-label={user.name}>
-          <Avatar name={user.name} size={34} />
+        <button className="ml-1" aria-label={displayName}>
+          <Avatar name={displayName} size={34} />
         </button>
       </div>
     </header>

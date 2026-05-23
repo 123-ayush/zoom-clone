@@ -63,3 +63,15 @@ export function initials(name: string): string {
 export function copyToClipboard(text: string): Promise<void> {
   return navigator.clipboard.writeText(text);
 }
+
+const STORED_NAME_KEY = "zoom_clone_display_name";
+
+export function getStoredName(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(STORED_NAME_KEY) ?? "";
+}
+
+export function setStoredName(name: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORED_NAME_KEY, name.trim());
+}

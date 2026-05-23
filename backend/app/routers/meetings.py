@@ -6,6 +6,7 @@ from app.crud import participants as crud_participants
 from app.database import get_db
 from app.ws.manager import room_manager
 from app.schemas.meeting import (
+    CreateInstantMeetingRequest,
     CreateScheduledMeetingRequest,
     JoinMeetingRequest,
     JoinMeetingResponse,
@@ -28,8 +29,13 @@ def _get_meeting_or_404(db: Session, meeting_id: str):
 
 
 @router.post("/instant", response_model=JoinMeetingResponse, status_code=201)
-def create_instant_meeting(db: Session = Depends(get_db)):
-    meeting, participant = crud_meetings.create_instant_meeting(db)
+def create_instant_meeting(
+    body: CreateInstantMeetingRequest | None = None,
+    db: Session = Depends(get_db),
+):
+    meeting, participant = crud_meetings.create_instant_meeting(
+        db, display_name=body.display_name if body else None
+    )
     return {"meeting": crud_meetings.enrich(meeting, db), "participant": participant}
 
 

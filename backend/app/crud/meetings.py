@@ -41,12 +41,15 @@ def get_meeting_by_meeting_id(db: Session, meeting_id: str) -> Meeting | None:
     return db.query(Meeting).filter(Meeting.meeting_id == meeting_id).first()
 
 
-def create_instant_meeting(db: Session) -> tuple[Meeting, Participant]:
+def create_instant_meeting(
+    db: Session, display_name: str | None = None
+) -> tuple[Meeting, Participant]:
     host = get_current_user(db)
+    host_display = display_name or host.name
     meeting_id = _generate_meeting_id()
     meeting = Meeting(
         meeting_id=meeting_id,
-        title=f"{host.name}'s Meeting",
+        title=f"{host_display}'s Meeting",
         host_id=host.id,
         type="instant",
         status="active",
@@ -59,7 +62,7 @@ def create_instant_meeting(db: Session) -> tuple[Meeting, Participant]:
     participant = Participant(
         meeting_id=meeting.id,
         user_id=host.id,
-        display_name=host.name,
+        display_name=host_display,
         role="host",
     )
     db.add(participant)

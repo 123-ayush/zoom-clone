@@ -3,10 +3,32 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { IncomingWSMessage, OutgoingWSMessage } from "@/lib/ws";
 
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-];
+function buildIceServers(): RTCIceServer[] {
+  const servers: RTCIceServer[] = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    // Free public TURN relay — works across NAT in production without any config.
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turns:openrelay.metered.ca:443",
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+  ];
+  // Optional override via env vars for a private TURN server.
+  const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
+  const turnUser = process.env.NEXT_PUBLIC_TURN_USERNAME;
+  const turnCred = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
+  if (turnUrl && turnUser && turnCred) {
+    servers.push({ urls: turnUrl, username: turnUser, credential: turnCred });
+  }
+  return servers;
+}
+
+const ICE_SERVERS: RTCIceServer[] = buildIceServers();
 
 interface UseWebRTCArgs {
   participantId: number | null;
@@ -188,13 +210,15 @@ export function useWebRTC({
       cameraVideoTrackRef.current = stream.getVideoTracks()[0] ?? null;
       setLocalStream(stream);
       setPermissionError(null);
-      // If peers already exist (rare race), attach tracks now.
-      for (const [, pc] of peersRef.current) {
+      // If peers already exist (camera arrived after WS room-state), attach tracks
+      // and renegotiate so the remote side receives a track-bearing offer.
+      for (const [peerId, pc] of peersRef.current) {
         for (const track of stream.getTracks()) {
           if (!pc.getSenders().some((s) => s.track?.id === track.id)) {
             pc.addTrack(track, stream);
           }
         }
+        void initiateOffer(peerId);
       }
     } catch (err) {
       const name = (err as DOMException | null)?.name ?? "";
@@ -204,7 +228,7 @@ export function useWebRTC({
           : "Could not access your camera or microphone."
       );
     }
-  }, []);
+  }, [initiateOffer]);
 
   const toggleMute = useCallback(() => {
     const next = !isMuted;

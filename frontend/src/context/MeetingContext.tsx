@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useCallback } from "react";
 import type { Meeting, Participant } from "@/types";
+import { getStoredName } from "@/lib/utils";
 
 interface MeetingState {
   meeting: Meeting | null;
@@ -21,7 +22,7 @@ const MeetingContext = createContext<MeetingState>({} as MeetingState);
 export function MeetingProvider({ children }: { children: React.ReactNode }) {
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [participant, setParticipant] = useState<Participant | null>(null);
-  const [displayName, setDisplayName] = useState("Default User");
+  const [displayName, setDisplayName] = useState(() => getStoredName() || "");
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
 
