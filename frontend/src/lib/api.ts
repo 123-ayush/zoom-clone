@@ -99,6 +99,12 @@ export const api = {
       method: "PATCH",
     }),
 
+  renameParticipant: (participantId: number, displayName: string) =>
+    request<Participant>(`/api/participants/${participantId}/rename`, {
+      method: "PATCH",
+      body: JSON.stringify({ display_name: displayName }),
+    }),
+
   deleteMeeting: (meetingId: string) =>
     request<{ message: string }>(`/api/meetings/${meetingId}`, {
       method: "DELETE",

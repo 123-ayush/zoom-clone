@@ -102,3 +102,9 @@ class CreateInstantMeetingRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     display_name: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class RenameParticipantRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    display_name: str = Field(min_length=1, max_length=100)

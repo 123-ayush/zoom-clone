@@ -99,6 +99,17 @@ def remove_participant(db: Session, meeting_db_id: int, participant_id: int) -> 
     return p is not None
 
 
+def rename_participant(
+    db: Session, participant_id: int, display_name: str
+) -> Participant | None:
+    p = db.get(Participant, participant_id)
+    if p:
+        p.display_name = display_name
+        db.commit()
+        db.refresh(p)
+    return p
+
+
 def leave_meeting(db: Session, participant_id: int) -> Participant | None:
     p = db.get(Participant, participant_id)
     if p and p.left_at is None:

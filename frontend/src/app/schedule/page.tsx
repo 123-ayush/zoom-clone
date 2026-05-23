@@ -51,7 +51,7 @@ export default function SchedulePage() {
 
   return (
     <div className="min-h-screen bg-zoom-surface flex flex-col">
-      <header className="bg-white border-b border-zoom-border h-14 flex items-center px-6">
+      <header className="bg-zoom-card border-b border-zoom-border h-14 flex items-center px-6">
         <Link href="/" className="flex items-center gap-2 text-zoom-muted hover:text-zoom-text transition-colors">
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
@@ -65,7 +65,7 @@ export default function SchedulePage() {
       </header>
 
       <main className="flex-1 flex items-start justify-center p-4 pt-10">
-        <div className="bg-white rounded-2xl shadow-sm border border-zoom-border p-8 w-full max-w-lg">
+        <div className="bg-zoom-card rounded-2xl shadow-sm border border-zoom-border p-8 w-full max-w-lg">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
               <Calendar size={20} className="text-zoom-blue" />
@@ -143,7 +143,7 @@ export default function SchedulePage() {
                 <select
                   value={duration}
                   onChange={(e) => setDuration(Number(e.target.value))}
-                  className="w-full border border-zoom-border rounded-lg px-3 py-2.5 text-sm text-zoom-text focus:outline-none focus:ring-2 focus:ring-zoom-blue focus:border-transparent bg-white"
+                  className="w-full border border-zoom-border rounded-lg px-3 py-2.5 text-sm text-zoom-text focus:outline-none focus:ring-2 focus:ring-zoom-blue focus:border-transparent bg-zoom-card"
                 >
                   {DURATION_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>

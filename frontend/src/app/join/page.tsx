@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Video } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatMeetingId, setStoredName } from "@/lib/utils";
+import { formatMeetingId, getStoredName, setStoredName } from "@/lib/utils";
 import JoinNameModal from "@/components/modals/JoinNameModal";
 import type { Meeting } from "@/types";
 
@@ -22,6 +22,18 @@ export default function JoinPage() {
     setError("");
   };
 
+  const handleJoin = async (displayName: string, meeting: Meeting) => {
+    setJoining(true);
+    try {
+      const res = await api.joinMeeting(meeting.meeting_id, displayName);
+      setStoredName(displayName);
+      router.push(`/meeting/${meeting.meeting_id}?pid=${res.participant.id}`);
+    } catch {
+      setJoining(false);
+      setError("Failed to join. Please try again.");
+    }
+  };
+
   const handleCheck = async () => {
     const meetingId = formatMeetingId(rawId);
     setChecking(true);
@@ -31,7 +43,13 @@ export default function JoinPage() {
       if (meeting.status === "ended") {
         setError("This meeting has already ended.");
       } else {
-        setFoundMeeting(meeting);
+        const stored = getStoredName();
+        if (stored) {
+          // Auto-join if name is already stored
+          await handleJoin(stored, meeting);
+        } else {
+          setFoundMeeting(meeting);
+        }
       }
     } catch {
       setError("Meeting not found. Check the ID and try again.");
@@ -40,25 +58,15 @@ export default function JoinPage() {
     }
   };
 
-  const handleJoin = async (displayName: string) => {
-    if (!foundMeeting) return;
-    setJoining(true);
-    try {
-      const res = await api.joinMeeting(foundMeeting.meeting_id, displayName);
-      setStoredName(displayName);
-      router.push(`/meeting/${foundMeeting.meeting_id}?pid=${res.participant.id}`);
-    } catch {
-      setJoining(false);
-      setError("Failed to join. Please try again.");
-    }
-  };
-
   const displayId = formatMeetingId(rawId);
 
   return (
     <div className="min-h-screen bg-zoom-surface flex flex-col">
-      <header className="bg-white border-b border-zoom-border h-14 flex items-center px-6">
-        <Link href="/" className="flex items-center gap-2 text-zoom-muted hover:text-zoom-text transition-colors">
+      <header className="bg-zoom-card border-b border-zoom-border h-14 flex items-center px-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-zoom-muted hover:text-zoom-text transition-colors"
+        >
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
         </Link>
@@ -71,9 +79,9 @@ export default function JoinPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-zoom-border p-8 w-full max-w-md">
+        <div className="bg-zoom-card rounded-2xl shadow-sm border border-zoom-border p-8 w-full max-w-md">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/50 rounded-full flex items-center justify-center">
               <Video size={20} className="text-zoom-blue" />
             </div>
             <div>
@@ -92,23 +100,28 @@ export default function JoinPage() {
                 value={displayId}
                 onChange={handleInput}
                 placeholder="123-4567-8901"
-                className="w-full border border-zoom-border rounded-lg px-3 py-2.5 text-sm text-zoom-text font-mono focus:outline-none focus:ring-2 focus:ring-zoom-blue focus:border-transparent"
-                onKeyDown={(e) => e.key === "Enter" && rawId.length >= 3 && handleCheck()}
+                className="w-full border border-zoom-border rounded-xl px-3 py-2.5 text-sm text-zoom-text font-mono bg-zoom-card focus:outline-none focus:ring-2 focus:ring-zoom-blue focus:border-transparent placeholder:text-zoom-muted"
+                onKeyDown={(e) =>
+                  e.key === "Enter" && rawId.length >= 3 && handleCheck()
+                }
               />
               {error && <p className="text-xs text-zoom-red mt-1.5">{error}</p>}
             </div>
 
             <button
               onClick={handleCheck}
-              disabled={rawId.length < 3 || checking}
-              className="w-full bg-zoom-blue text-white rounded-lg py-2.5 text-sm font-medium hover:bg-zoom-blue-h transition-colors disabled:opacity-50"
+              disabled={rawId.length < 3 || checking || joining}
+              className="w-full bg-zoom-blue text-white rounded-xl py-2.5 text-sm font-medium hover:bg-zoom-blue-h transition-colors disabled:opacity-50"
             >
-              {checking ? "Checking…" : "Continue"}
+              {checking || joining ? "Joining…" : "Continue"}
             </button>
 
             <p className="text-center text-xs text-zoom-muted">
               Don&apos;t have a meeting ID?{" "}
-              <Link href="/schedule" className="text-zoom-blue hover:underline font-medium">
+              <Link
+                href="/schedule"
+                className="text-zoom-blue hover:underline font-medium"
+              >
                 Schedule one
               </Link>
             </p>
@@ -120,7 +133,7 @@ export default function JoinPage() {
         meetingId={foundMeeting?.meeting_id ?? ""}
         meetingTitle={foundMeeting?.title}
         isOpen={!!foundMeeting}
-        onJoin={handleJoin}
+        onJoin={(name) => foundMeeting && handleJoin(name, foundMeeting)}
         loading={joining}
       />
     </div>

@@ -7,6 +7,7 @@ from app.schemas.meeting import (
     MuteParticipantRequest,
     MuteVideoRequest,
     ParticipantResponse,
+    RenameParticipantRequest,
 )
 
 router = APIRouter(prefix="/api/participants", tags=["participants"])
@@ -31,6 +32,18 @@ def toggle_video(
     db: Session = Depends(get_db),
 ):
     p = crud_participants.set_video_off(db, participant_id, body.is_video_off)
+    if not p:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    return p
+
+
+@router.patch("/{participant_id}/rename", response_model=ParticipantResponse)
+def rename_participant(
+    participant_id: int,
+    body: RenameParticipantRequest,
+    db: Session = Depends(get_db),
+):
+    p = crud_participants.rename_participant(db, participant_id, body.display_name)
     if not p:
         raise HTTPException(status_code=404, detail="Participant not found")
     return p

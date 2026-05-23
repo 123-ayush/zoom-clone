@@ -65,7 +65,7 @@ export default function ClipsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-zoom-surface">
       <Navbar />
       <main className="max-w-5xl mx-auto w-full px-6 py-8 flex-1">
         <h1 className="text-2xl font-semibold text-zoom-text mb-6">Clips</h1>
@@ -77,13 +77,13 @@ export default function ClipsPage() {
         )}
 
         {!loading && error && (
-          <div className="bg-white border border-zoom-border rounded-2xl p-6 text-sm text-zoom-red">
+          <div className="bg-zoom-card border border-zoom-border rounded-2xl p-6 text-sm text-zoom-red">
             {error}
           </div>
         )}
 
         {!loading && !error && recordings.length === 0 && (
-          <div className="bg-white border border-zoom-border rounded-2xl p-12 text-center">
+          <div className="bg-zoom-card border border-zoom-border rounded-2xl p-12 text-center">
             <Video size={36} className="text-zoom-muted mx-auto mb-3" />
             <p className="text-sm text-zoom-muted">
               No clips yet. Start a meeting and hit{" "}
@@ -94,7 +94,7 @@ export default function ClipsPage() {
         )}
 
         {!loading && !error && recordings.length > 0 && (
-          <ul className="bg-white border border-zoom-border rounded-2xl divide-y divide-zoom-border overflow-hidden">
+          <ul className="bg-zoom-card border border-zoom-border rounded-2xl divide-y divide-zoom-border overflow-hidden">
             {recordings.map((rec) => (
               <li
                 key={rec.id}

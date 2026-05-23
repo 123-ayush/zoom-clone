@@ -76,6 +76,10 @@ export type IncomingWSMessage =
   | {
       type: "recording-stopped";
       payload: { clientId: number; recordingId?: number };
+    }
+  | {
+      type: "peer-renamed";
+      payload: { clientId: number; displayName: string };
     };
 
 export type OutgoingWSMessage =
@@ -107,7 +111,8 @@ export type OutgoingWSMessage =
       payload: { to: number; candidate: RTCIceCandidateInit };
     }
   | { type: "recording-started"; payload: { recordingId?: number } }
-  | { type: "recording-stopped"; payload: { recordingId?: number } };
+  | { type: "recording-stopped"; payload: { recordingId?: number } }
+  | { type: "peer-rename"; payload: { displayName: string } };
 
 const WS_BASE =
   process.env.NEXT_PUBLIC_WS_URL ??

@@ -165,6 +165,8 @@ async def _dispatch(
             meeting_id,
             {"type": msg_type, "payload": {"clientId": sender_id, **payload}},
         )
+    elif msg_type == "peer-rename":
+        await _handle_rename(meeting_id, sender_id, payload)
     else:
         logger.debug("Ignoring unknown WS message type: %s", msg_type)
 
@@ -230,6 +232,24 @@ async def _handle_chat_send(
         db.close()
 
     await room_manager.broadcast(meeting_id, {"type": "chat-message", "payload": out})
+
+
+async def _handle_rename(
+    meeting_id: str, sender_id: int, payload: dict[str, Any]
+) -> None:
+    new_name = payload.get("displayName", "")
+    if not isinstance(new_name, str) or not new_name.strip():
+        return
+    new_name = new_name.strip()
+    db = SessionLocal()
+    try:
+        crud_participants.rename_participant(db, sender_id, new_name)
+    finally:
+        db.close()
+    await room_manager.broadcast(
+        meeting_id,
+        {"type": "peer-renamed", "payload": {"clientId": sender_id, "displayName": new_name}},
+    )
 
 
 async def _handle_mute_all(meeting_id: str, meeting_pk: int, sender_id: int) -> None:

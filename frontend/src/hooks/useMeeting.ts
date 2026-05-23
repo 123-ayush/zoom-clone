@@ -93,6 +93,16 @@ export function useMeeting(
           );
           break;
         }
+        case "peer-renamed": {
+          setParticipants((prev) =>
+            prev.map((p) =>
+              p.id === msg.payload.clientId
+                ? { ...p, display_name: msg.payload.displayName }
+                : p
+            )
+          );
+          break;
+        }
         case "meeting-ended": {
           setMeeting((m) =>
             m ? { ...m, status: "ended", ended_at: new Date().toISOString() } : m

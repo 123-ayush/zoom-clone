@@ -9,6 +9,7 @@ import {
   MonitorOff,
   MoreHorizontal,
   PenSquare,
+  Pencil,
   PhoneOff,
   Users,
   Video,
@@ -45,6 +46,7 @@ interface Props {
   onToggleChat: () => void;
   onToggleWhiteboard: () => void;
   onToggleRecording: () => void;
+  onRename: () => void;
   onLeave: () => void;
   onEndForAll?: () => void;
 }
@@ -100,6 +102,7 @@ export default function MeetingControls({
   onToggleChat,
   onToggleWhiteboard,
   onToggleRecording,
+  onRename,
   onLeave,
   onEndForAll,
 }: Props) {
@@ -168,6 +171,14 @@ export default function MeetingControls({
             >
               <PenSquare size={16} />
               Whiteboard
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem
+              onClick={onRename}
+              className="gap-3 cursor-pointer focus:bg-white/10 focus:text-white"
+            >
+              <Pencil size={16} />
+              Rename me
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/10" />
             <DropdownMenuItem

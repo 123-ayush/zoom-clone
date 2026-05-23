@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Geist } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import { MeetingProvider } from "@/context/MeetingContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/context/ThemeContext";
+import GlobalNameSetup from "@/components/layout/GlobalNameSetup";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const inter = Inter({ subsets: ["latin"] });
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Zoom",
@@ -20,12 +20,16 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={cn("h-full", "font-sans", geist.variable)}>
-      <body className={`${inter.className} min-h-full`}>
-        <UserProvider>
-          <MeetingProvider>
-            <TooltipProvider delay={300}>{children}</TooltipProvider>
-          </MeetingProvider>
-        </UserProvider>
+      <body className="min-h-full">
+        <ThemeProvider>
+          <UserProvider>
+            <MeetingProvider>
+              <TooltipProvider delay={300}>
+                <GlobalNameSetup>{children}</GlobalNameSetup>
+              </TooltipProvider>
+            </MeetingProvider>
+          </UserProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

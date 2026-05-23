@@ -30,7 +30,7 @@ export default function MeetingCard({ meeting, variant }: Props) {
   };
 
   return (
-    <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-zoom-border hover:shadow-sm transition-shadow">
+    <div className="flex items-center justify-between p-4 bg-zoom-card rounded-xl border border-zoom-border hover:shadow-sm transition-shadow">
       <div className="flex items-center gap-4 min-w-0">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${variant === "upcoming" ? "bg-blue-50" : "bg-gray-100"}`}>
           {variant === "upcoming" ? (

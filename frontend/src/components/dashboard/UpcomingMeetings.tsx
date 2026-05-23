@@ -10,7 +10,7 @@ interface Props {
 
 export default function UpcomingMeetings({ meetings, loading }: Props) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-zoom-border p-6">
+    <div className="bg-zoom-card rounded-2xl shadow-sm border border-zoom-border p-6">
       <h2 className="text-base font-semibold text-zoom-text mb-4">Upcoming Meetings</h2>
       {loading ? (
         <div className="flex justify-center py-8">
