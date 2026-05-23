@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Video, UserPlus, CalendarPlus, Monitor } from "lucide-react";
+import { CalendarPlus, Film, UserPlus, Video } from "lucide-react";
 import { api } from "@/lib/api";
 import { useState } from "react";
 import Spinner from "@/components/ui/Spinner";
@@ -21,9 +21,12 @@ export default function QuickActions() {
   const handleNewMeeting = async () => {
     setCreating(true);
     try {
-      const res = await api.createInstantMeeting("Default User");
-      router.push(`/meeting/${res.meeting.meeting_id}?host=1&pid=${res.participant.id}`);
-    } catch {
+      const res = await api.createInstantMeeting();
+      router.push(
+        `/meeting/${res.meeting.meeting_id}?host=1&pid=${res.participant.id}`
+      );
+    } catch (err) {
+      console.error("Failed to start instant meeting:", err);
       setCreating(false);
     }
   };
@@ -52,11 +55,11 @@ export default function QuickActions() {
       onClick: () => router.push("/schedule"),
     },
     {
-      icon: <Monitor size={28} className="text-white" />,
-      label: "Share Screen",
-      bg: "bg-gray-50 hover:bg-gray-100",
-      iconBg: "bg-gray-400",
-      onClick: () => {},
+      icon: <Film size={28} className="text-white" />,
+      label: "Clips",
+      bg: "bg-purple-50 hover:bg-purple-100",
+      iconBg: "bg-purple-500",
+      onClick: () => router.push("/clips"),
     },
   ];
 

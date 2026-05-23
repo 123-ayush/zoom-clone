@@ -1,5 +1,6 @@
-from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+from app.time_utils import UtcDateTime
 
 
 class UserResponse(BaseModel):
@@ -7,6 +8,6 @@ class UserResponse(BaseModel):
     name: str
     email: str
     avatar_url: str | None
-    created_at: datetime
+    created_at: UtcDateTime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

@@ -1,0 +1,37 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/data
+      - recordings_data:/app/recordings
+    environment:
+      DATABASE_URL: sqlite:////app/data/zoom_clone.db
+      RECORDINGS_DIR: /app/recordings
+      FRONTEND_URL: http://localhost:3000
+      ALLOWED_ORIGINS: http://localhost:3000
+      LOG_LEVEL: INFO
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Next.js bakes NEXT_PUBLIC_* into the static bundle at build time.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_WS_URL: ws://localhost:8000
+        NEXT_PUBLIC_FRONTEND_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+      NEXT_PUBLIC_FRONTEND_URL: http://localhost:3000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  recordings_data:

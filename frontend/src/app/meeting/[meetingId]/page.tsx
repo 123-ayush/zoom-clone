@@ -1,65 +1,120 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Copy, Check, Lock } from "lucide-react";
-import { api } from "@/lib/api";
-import { useMeeting } from "@/hooks/useMeeting";
-import JoinNameModal from "@/components/modals/JoinNameModal";
-import VideoGrid from "@/components/meeting/VideoGrid";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Check, Copy, Lock } from "lucide-react";
+
+import ChatPanel from "@/components/meeting/ChatPanel";
 import MeetingControls from "@/components/meeting/MeetingControls";
 import ParticipantsPanel from "@/components/meeting/ParticipantsPanel";
+import VideoGrid from "@/components/meeting/VideoGrid";
+import Whiteboard from "@/components/meeting/Whiteboard";
+import JoinNameModal from "@/components/modals/JoinNameModal";
 import Spinner from "@/components/ui/Spinner";
-import type { Participant } from "@/types";
+import { useChat } from "@/hooks/useChat";
+import { useMeeting } from "@/hooks/useMeeting";
+import { useRecording } from "@/hooks/useRecording";
+import { useWebRTC } from "@/hooks/useWebRTC";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/utils";
+import { buildMeetingWsUrl } from "@/lib/ws";
+
+type Panel = "none" | "participants" | "chat" | "whiteboard";
 
 export default function MeetingRoomPage() {
   const params = useParams<{ meetingId: string }>();
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const meetingId = params.meetingId;
 
-  const isHost = searchParams.get("host") === "1";
-  const initialPid = searchParams.get("pid") ? Number(searchParams.get("pid")) : null;
+  const urlPid = searchParams.get("pid");
+  const initialPid = urlPid ? Number(urlPid) : null;
+  const initialIsHost = searchParams.get("host") === "1";
 
-  const { meeting, participants, loading, error, setParticipants } = useMeeting(meetingId);
-
-  const [selfParticipantId, setSelfParticipantId] = useState<number | null>(initialPid);
-  const [showJoinModal, setShowJoinModal] = useState(!initialPid);
+  const [participantId, setParticipantId] = useState<number | null>(initialPid);
+  const [showJoinModal, setShowJoinModal] = useState(initialPid == null);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
-
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
-  const [showParticipants, setShowParticipants] = useState(false);
+  const [panel, setPanel] = useState<Panel>("none");
   const [idCopied, setIdCopied] = useState(false);
+  const [recordingByClient, setRecordingByClient] = useState<Set<number>>(
+    new Set()
+  );
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const wsUrl = useMemo(
+    () =>
+      participantId != null && meetingId
+        ? buildMeetingWsUrl(meetingId, participantId)
+        : null,
+    [meetingId, participantId]
+  );
 
-  // Start camera
-  const startCamera = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch {
-      setIsVideoOff(true);
-    }
-  }, []);
+  const { send, subscribe, status: wsStatus } = useWebSocket(wsUrl);
+  const { meeting, participants, loading, error } = useMeeting(
+    meetingId,
+    subscribe
+  );
 
+  const rtc = useWebRTC({ participantId, send, subscribe });
+  const { messages, sendMessage } = useChat({ send, subscribe });
+  const recording = useRecording({
+    meetingId,
+    participantId,
+    stream: rtc.localStream,
+    send,
+    meetingTitle: meeting?.title ?? "Meeting",
+  });
+
+  // Side-effect WS messages that affect the page directly.
   useEffect(() => {
-    if (!showJoinModal) startCamera();
-    return () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
-  }, [showJoinModal, startCamera]);
+    return subscribe((msg) => {
+      switch (msg.type) {
+        case "recording-started":
+          setRecordingByClient((prev) => {
+            const next = new Set(prev);
+            next.add(msg.payload.clientId);
+            return next;
+          });
+          break;
+        case "recording-stopped":
+          setRecordingByClient((prev) => {
+            const next = new Set(prev);
+            next.delete(msg.payload.clientId);
+            return next;
+          });
+          break;
+        case "removed":
+          rtc.cleanup();
+          router.push("/?notice=removed");
+          break;
+        case "meeting-ended":
+          rtc.cleanup();
+          router.push("/?notice=ended");
+          break;
+        default:
+          break;
+      }
+    });
+  }, [subscribe, router, rtc]);
+
+  // Start camera once we have a participant id.
+  useEffect(() => {
+    if (participantId != null) {
+      void rtc.startCamera();
+    }
+    // rtc.startCamera identity is stable via useCallback; intentional dep choice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participantId]);
+
+  const isRecordingActive =
+    recording.isRecording || recordingByClient.size > 0;
 
   const handleJoin = async (displayName: string) => {
     setJoining(true);
     setJoinError("");
     try {
       const res = await api.joinMeeting(meetingId, displayName);
-      setSelfParticipantId(res.participant.id);
+      setParticipantId(res.participant.id);
       setShowJoinModal(false);
     } catch (e) {
       setJoinError(e instanceof Error ? e.message : "Failed to join.");
@@ -67,63 +122,47 @@ export default function MeetingRoomPage() {
     }
   };
 
-  const handleToggleMute = async () => {
-    const next = !isMuted;
-    setIsMuted(next);
-    if (streamRef.current) {
-      streamRef.current.getAudioTracks().forEach((t) => (t.enabled = !next));
-    }
-    if (selfParticipantId) {
-      await api.muteParticipant(selfParticipantId, next).catch(() => {});
-    }
-  };
+  const selfParticipant = participants.find((p) => p.id === participantId);
+  const amHost = selfParticipant?.role === "host" || initialIsHost;
 
-  const handleToggleVideo = async () => {
-    const next = !isVideoOff;
-    setIsVideoOff(next);
-    if (streamRef.current) {
-      streamRef.current.getVideoTracks().forEach((t) => (t.enabled = !next));
-    }
-    if (selfParticipantId) {
-      await api.toggleVideo(selfParticipantId, next).catch(() => {});
-    }
-  };
-
-  const handleLeave = async () => {
-    if (selfParticipantId) {
-      await api.leaveParticipant(selfParticipantId).catch(() => {});
-    }
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+  const handleLeave = () => {
+    rtc.cleanup();
     router.push("/");
   };
 
   const handleEndForAll = async () => {
-    await api.updateMeetingStatus(meetingId, "ended").catch(() => {});
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    try {
+      await api.updateMeetingStatus(meetingId, "ended");
+    } catch (err) {
+      console.error("End meeting failed:", err);
+    }
+    rtc.cleanup();
     router.push("/");
   };
 
-  const handleMuteAll = async () => {
-    try {
-      await api.muteAllParticipants(meetingId);
-      const updated = await api.getParticipants(meetingId);
-      setParticipants(updated);
-    } catch { /* silently fail */ }
-  };
+  const handleMuteAll = () => send({ type: "host-mute-all", payload: {} });
 
-  const refreshParticipants = async () => {
-    const updated = await api.getParticipants(meetingId).catch(() => [] as Participant[]);
-    setParticipants(updated);
-  };
+  const handleRemoveParticipant = (targetId: number) =>
+    send({ type: "host-remove", payload: { targetClientId: targetId } });
 
   const handleCopyId = async () => {
-    await copyToClipboard(meeting?.invite_link ?? "");
+    await copyToClipboard(meeting?.invite_link ?? meetingId);
     setIdCopied(true);
     setTimeout(() => setIdCopied(false), 2000);
   };
 
-  const selfParticipant = participants.find((p) => p.id === selfParticipantId);
-  const amHost = selfParticipant?.role === "host" || isHost;
+  const togglePanel = (next: Panel) =>
+    setPanel((cur) => (cur === next ? "none" : next));
+
+  const handleToggleScreenShare = () => {
+    if (rtc.isScreenSharing) void rtc.stopScreenShare();
+    else void rtc.startScreenShare();
+  };
+
+  const handleToggleRecording = () => {
+    if (recording.isRecording) recording.stop();
+    else recording.start();
+  };
 
   if (loading) {
     return (
@@ -135,7 +174,7 @@ export default function MeetingRoomPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zoom-dark flex flex-col items-center justify-center gap-4 text-white">
+      <div className="min-h-screen bg-zoom-dark flex flex-col items-center justify-center gap-4 text-white p-6">
         <p className="text-lg font-medium">Meeting not found</p>
         <p className="text-sm text-white/60">{error}</p>
         <button
@@ -148,6 +187,8 @@ export default function MeetingRoomPage() {
     );
   }
 
+  const sidePanelOpen = panel === "participants" || panel === "chat";
+
   return (
     <div className="min-h-screen bg-zoom-dark flex flex-col">
       {/* Top bar */}
@@ -156,55 +197,108 @@ export default function MeetingRoomPage() {
           <Lock size={14} />
           <span className="hidden sm:inline">Zoom Meeting</span>
         </div>
-
         <button
           onClick={handleCopyId}
           className="flex items-center gap-2 bg-zoom-panel hover:bg-zoom-tile text-white text-xs px-3 py-1.5 rounded-full font-mono transition-colors"
         >
           {meetingId}
-          {idCopied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+          {idCopied ? (
+            <Check size={12} className="text-green-400" />
+          ) : (
+            <Copy size={12} />
+          )}
         </button>
-
         <div className="w-24 text-right">
-          {meeting?.status === "active" && (
-            <span className="text-xs text-zoom-red font-medium animate-pulse">● REC</span>
+          {isRecordingActive && (
+            <span className="text-xs text-zoom-red font-medium animate-pulse">
+              ● REC
+            </span>
           )}
         </div>
       </div>
 
-      {/* Video area */}
-      <div className={`flex flex-1 overflow-hidden ${showParticipants ? "mr-72" : ""}`}>
+      {/* Banners */}
+      {rtc.permissionError && (
+        <div className="bg-amber-600 text-white text-sm px-4 py-2 text-center">
+          {rtc.permissionError}{" "}
+          <button
+            onClick={() => void rtc.startCamera()}
+            className="underline ml-2"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+      {wsStatus === "closed" && participantId != null && (
+        <div className="bg-zoom-red text-white text-sm px-4 py-2 text-center">
+          Disconnected — trying to reconnect…
+        </div>
+      )}
+      {recording.error && (
+        <div className="bg-zoom-red text-white text-sm px-4 py-2 text-center">
+          Recording error: {recording.error}
+        </div>
+      )}
+
+      {/* Video grid */}
+      <div
+        className={`flex flex-1 overflow-hidden ${sidePanelOpen ? "mr-80" : ""}`}
+      >
         <VideoGrid
           participants={participants}
-          selfParticipantId={selfParticipantId}
-          videoRef={videoRef}
-          isVideoOff={isVideoOff}
+          selfParticipantId={participantId}
+          localStream={rtc.localStream}
+          remoteStreams={rtc.remoteStreams}
+          isMuted={rtc.isMuted}
+          isVideoOff={rtc.isVideoOff}
+          screenSharingClientId={rtc.screenSharingClientId}
         />
       </div>
 
       {/* Controls */}
       <MeetingControls
-        isMuted={isMuted}
-        isVideoOff={isVideoOff}
+        isMuted={rtc.isMuted}
+        isVideoOff={rtc.isVideoOff}
         isHost={amHost}
-        showParticipants={showParticipants}
-        onToggleMute={handleToggleMute}
-        onToggleVideo={handleToggleVideo}
-        onToggleParticipants={() => setShowParticipants((v) => !v)}
+        isScreenSharing={rtc.isScreenSharing}
+        isRecording={recording.isRecording}
+        activePanel={panel}
+        onToggleMute={rtc.toggleMute}
+        onToggleVideo={rtc.toggleVideo}
+        onToggleScreenShare={handleToggleScreenShare}
+        onToggleParticipants={() => togglePanel("participants")}
+        onToggleChat={() => togglePanel("chat")}
+        onToggleWhiteboard={() => togglePanel("whiteboard")}
+        onToggleRecording={handleToggleRecording}
         onLeave={handleLeave}
         onEndForAll={amHost ? handleEndForAll : undefined}
       />
 
-      {/* Participants panel */}
-      {showParticipants && (
+      {/* Panels */}
+      {panel === "participants" && (
         <ParticipantsPanel
           participants={participants}
           isHost={amHost}
-          meetingId={meetingId}
-          selfParticipantId={selfParticipantId}
-          onClose={() => setShowParticipants(false)}
+          selfParticipantId={participantId}
+          onClose={() => setPanel("none")}
           onMuteAll={handleMuteAll}
-          onParticipantsChange={refreshParticipants}
+          onRemove={handleRemoveParticipant}
+        />
+      )}
+      {panel === "chat" && (
+        <ChatPanel
+          messages={messages}
+          selfClientId={participantId}
+          onSend={sendMessage}
+          onClose={() => setPanel("none")}
+        />
+      )}
+      {panel === "whiteboard" && (
+        <Whiteboard
+          send={send}
+          subscribe={subscribe}
+          selfClientId={participantId}
+          onClose={() => setPanel("none")}
         />
       )}
 

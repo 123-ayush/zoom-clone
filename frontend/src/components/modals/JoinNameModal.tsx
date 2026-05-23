@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import Spinner from "@/components/ui/Spinner";
+import { useUser } from "@/context/UserContext";
 
 interface Props {
   meetingId: string;
@@ -11,8 +12,15 @@ interface Props {
   loading?: boolean;
 }
 
-export default function JoinNameModal({ meetingId, meetingTitle, isOpen, onJoin, loading }: Props) {
-  const [name, setName] = useState("Default User");
+export default function JoinNameModal({
+  meetingId,
+  meetingTitle,
+  isOpen,
+  onJoin,
+  loading,
+}: Props) {
+  const user = useUser();
+  const [name, setName] = useState(user.name);
 
   if (!isOpen) return null;
 

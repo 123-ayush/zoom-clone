@@ -1,17 +1,36 @@
 "use client";
 import {
-  Mic, MicOff, Video, VideoOff, Users, MessageSquare,
-  Monitor, PhoneOff, ChevronUp,
+  ChevronUp,
+  Circle,
+  CircleStop,
+  MessageSquare,
+  Mic,
+  MicOff,
+  Monitor,
+  MonitorOff,
+  PenSquare,
+  PhoneOff,
+  Users,
+  Video,
+  VideoOff,
 } from "lucide-react";
+
+type Panel = "none" | "participants" | "chat" | "whiteboard";
 
 interface Props {
   isMuted: boolean;
   isVideoOff: boolean;
   isHost: boolean;
-  showParticipants: boolean;
+  isScreenSharing: boolean;
+  isRecording: boolean;
+  activePanel: Panel;
   onToggleMute: () => void;
   onToggleVideo: () => void;
+  onToggleScreenShare: () => void;
   onToggleParticipants: () => void;
+  onToggleChat: () => void;
+  onToggleWhiteboard: () => void;
+  onToggleRecording: () => void;
   onLeave: () => void;
   onEndForAll?: () => void;
 }
@@ -20,20 +39,19 @@ function ControlBtn({
   icon,
   label,
   onClick,
-  danger = false,
   active = false,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  danger?: boolean;
   active?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors cursor-pointer
-        ${danger ? "bg-zoom-red hover:bg-red-700 text-white" : active ? "text-white bg-white/10" : "text-white hover:bg-white/10"}`}
+      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors cursor-pointer ${
+        active ? "text-white bg-white/15" : "text-white hover:bg-white/10"
+      }`}
     >
       {icon}
       <span className="text-xs font-medium whitespace-nowrap">{label}</span>
@@ -41,12 +59,27 @@ function ControlBtn({
   );
 }
 
-export default function MeetingControls({
-  isMuted, isVideoOff, isHost, showParticipants,
-  onToggleMute, onToggleVideo, onToggleParticipants, onLeave, onEndForAll,
-}: Props) {
+export default function MeetingControls(props: Props) {
+  const {
+    isMuted,
+    isVideoOff,
+    isHost,
+    isScreenSharing,
+    isRecording,
+    activePanel,
+    onToggleMute,
+    onToggleVideo,
+    onToggleScreenShare,
+    onToggleParticipants,
+    onToggleChat,
+    onToggleWhiteboard,
+    onToggleRecording,
+    onLeave,
+    onEndForAll,
+  } = props;
+
   return (
-    <div className="bg-zoom-darker border-t border-white/10 h-20 flex items-center justify-between px-6 shrink-0">
+    <div className="bg-zoom-darker border-t border-white/10 h-20 flex items-center justify-between px-4 sm:px-6 shrink-0">
       <div className="flex items-center gap-1">
         <ControlBtn
           icon={isMuted ? <MicOff size={20} className="text-zoom-red" /> : <Mic size={20} />}
@@ -55,7 +88,9 @@ export default function MeetingControls({
           active={isMuted}
         />
         <ControlBtn
-          icon={isVideoOff ? <VideoOff size={20} className="text-zoom-red" /> : <Video size={20} />}
+          icon={
+            isVideoOff ? <VideoOff size={20} className="text-zoom-red" /> : <Video size={20} />
+          }
           label={isVideoOff ? "Start Video" : "Stop Video"}
           onClick={onToggleVideo}
           active={isVideoOff}
@@ -64,40 +99,64 @@ export default function MeetingControls({
 
       <div className="flex items-center gap-1">
         <ControlBtn
-          icon={<Monitor size={20} className="text-white/40" />}
-          label="Share Screen"
-          onClick={() => {}}
+          icon={
+            isScreenSharing ? (
+              <MonitorOff size={20} className="text-zoom-blue" />
+            ) : (
+              <Monitor size={20} />
+            )
+          }
+          label={isScreenSharing ? "Stop Share" : "Share"}
+          onClick={onToggleScreenShare}
+          active={isScreenSharing}
         />
         <ControlBtn
           icon={<MessageSquare size={20} />}
           label="Chat"
-          onClick={() => {}}
+          onClick={onToggleChat}
+          active={activePanel === "chat"}
         />
         <ControlBtn
           icon={<Users size={20} />}
-          label="Participants"
+          label="People"
           onClick={onToggleParticipants}
-          active={showParticipants}
+          active={activePanel === "participants"}
+        />
+        <ControlBtn
+          icon={<PenSquare size={20} />}
+          label="Whiteboard"
+          onClick={onToggleWhiteboard}
+          active={activePanel === "whiteboard"}
+        />
+        <ControlBtn
+          icon={
+            isRecording ? (
+              <CircleStop size={20} className="text-zoom-red" />
+            ) : (
+              <Circle size={20} />
+            )
+          }
+          label={isRecording ? "Stop Rec" : "Record"}
+          onClick={onToggleRecording}
+          active={isRecording}
         />
       </div>
 
       <div className="flex items-center gap-2">
         {isHost && onEndForAll && (
-          <div className="relative group">
-            <button
-              onClick={onEndForAll}
-              className="flex items-center gap-1.5 bg-zoom-red hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-            >
-              End <ChevronUp size={14} />
-            </button>
-          </div>
+          <button
+            onClick={onEndForAll}
+            className="hidden sm:flex items-center gap-1.5 bg-zoom-red hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          >
+            End <ChevronUp size={14} />
+          </button>
         )}
         <button
           onClick={onLeave}
           className="flex items-center gap-1.5 bg-zoom-red hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
         >
           <PhoneOff size={16} />
-          {isHost ? "Leave" : "Leave"}
+          Leave
         </button>
       </div>
     </div>

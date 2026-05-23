@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+coverage
+tests
+*.test.ts
+*.test.tsx
+.env.local
+.env.local.example
+README.md
+AGENTS.md
+CLAUDE.md
+tsconfig.tsbuildinfo

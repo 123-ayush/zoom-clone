@@ -1,10 +1,23 @@
 import os
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-DATABASE_URL = f"sqlite:///{os.path.join(os.path.dirname(os.path.dirname(__file__)), 'zoom_clone.db')}"
+from app.config import settings
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+_default_sqlite = (
+    f"sqlite:///{os.path.join(os.path.dirname(os.path.dirname(__file__)), 'zoom_clone.db')}"
+)
+DATABASE_URL = settings.database_url or _default_sqlite
+
+# Railway/Render emit postgres:// but SQLAlchemy requires postgresql://.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+_is_sqlite = DATABASE_URL.startswith("sqlite")
+connect_args = {"check_same_thread": False} if _is_sqlite else {}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

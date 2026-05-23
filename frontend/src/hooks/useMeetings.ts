@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+
 import { api } from "@/lib/api";
 import type { Meeting } from "@/types";
 
@@ -8,23 +9,31 @@ export function useMeetings() {
   const [recent, setRecent] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
 
-  const load = async () => {
-    try {
-      const data = await api.listMeetings();
-      setUpcoming(data.upcoming);
-      setRecent(data.recent);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load meetings");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => {
-    load();
-  }, []);
+    let cancelled = false;
+    api
+      .listMeetings()
+      .then((data) => {
+        if (cancelled) return;
+        setUpcoming(data.upcoming);
+        setRecent(data.recent);
+        setError(null);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : "Failed to load meetings");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [version]);
 
-  return { upcoming, recent, loading, error, refresh: load };
+  return { upcoming, recent, loading, error, refresh };
 }

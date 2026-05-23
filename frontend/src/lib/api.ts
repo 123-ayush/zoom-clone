@@ -1,8 +1,10 @@
 import type {
+  ChatMessage,
+  JoinMeetingResponse,
   Meeting,
   MeetingListResponse,
-  JoinMeetingResponse,
   Participant,
+  Recording,
 } from "@/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -16,6 +18,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const detail = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(detail?.detail ?? "Request failed");
   }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+async function requestForm<T>(path: string, formData: FormData): Promise<T> {
+  // Don't set Content-Type — the browser sets the multipart boundary.
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body: formData });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail?.detail ?? "Upload failed");
+  }
   return res.json() as Promise<T>;
 }
 
@@ -25,11 +38,8 @@ export const api = {
   getMeeting: (meetingId: string) =>
     request<Meeting>(`/api/meetings/${meetingId}`),
 
-  createInstantMeeting: (hostName: string) =>
-    request<JoinMeetingResponse>("/api/meetings/instant", {
-      method: "POST",
-      body: JSON.stringify({ host_name: hostName }),
-    }),
+  createInstantMeeting: () =>
+    request<JoinMeetingResponse>("/api/meetings/instant", { method: "POST" }),
 
   scheduleMeeting: (data: {
     title: string;
@@ -39,7 +49,7 @@ export const api = {
   }) =>
     request<Meeting>("/api/meetings/schedule", {
       method: "POST",
-      body: JSON.stringify({ ...data, host_name: "Default User" }),
+      body: JSON.stringify(data),
     }),
 
   updateMeetingStatus: (meetingId: string, status: string) =>
@@ -48,20 +58,20 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
 
-  joinMeeting: (meetingId: string, displayName: string, userId?: number) =>
+  joinMeeting: (meetingId: string, displayName: string) =>
     request<JoinMeetingResponse>(`/api/meetings/${meetingId}/join`, {
       method: "POST",
-      body: JSON.stringify({ display_name: displayName, user_id: userId ?? null }),
+      body: JSON.stringify({ display_name: displayName }),
     }),
 
   getParticipants: (meetingId: string) =>
     request<Participant[]>(`/api/meetings/${meetingId}/participants`),
 
   muteAllParticipants: (meetingId: string) =>
-    request<{ updated_count: number }>(`/api/meetings/${meetingId}/mute-all`, {
-      method: "PATCH",
-      body: JSON.stringify({ is_muted: true }),
-    }),
+    request<{ updated_count: number }>(
+      `/api/meetings/${meetingId}/mute-all`,
+      { method: "PATCH", body: JSON.stringify({ is_muted: true }) }
+    ),
 
   removeParticipant: (meetingId: string, participantId: number) =>
     request<{ message: string }>(
@@ -90,4 +100,30 @@ export const api = {
     request<{ message: string }>(`/api/meetings/${meetingId}`, {
       method: "DELETE",
     }),
+
+  getChat: (meetingId: string) =>
+    request<ChatMessage[]>(`/api/meetings/${meetingId}/chat`),
+
+  listRecordings: () => request<Recording[]>("/api/recordings"),
+
+  deleteRecording: (id: number) =>
+    request<{ message: string }>(`/api/recordings/${id}`, { method: "DELETE" }),
+
+  uploadRecording: (
+    meetingId: string,
+    blob: Blob,
+    title: string,
+    durationSecs: number,
+    participantId?: number
+  ) => {
+    const fd = new FormData();
+    fd.append("file", blob, `${meetingId}.webm`);
+    fd.append("title", title);
+    fd.append("duration_secs", String(durationSecs));
+    if (participantId != null) fd.append("participant_id", String(participantId));
+    return requestForm<Recording>(
+      `/api/meetings/${meetingId}/recordings`,
+      fd
+    );
+  },
 };

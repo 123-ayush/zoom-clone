@@ -44,3 +44,23 @@ export interface JoinMeetingResponse {
   meeting: Meeting;
   participant: Participant;
 }
+
+export interface ChatMessage {
+  id: number;
+  meeting_id: number;
+  participant_id: number | null;
+  display_name: string;
+  body: string;
+  created_at: string;
+}
+
+export interface Recording {
+  id: number;
+  meeting_id: number;
+  title: string;
+  duration_secs: number;
+  size_bytes: number;
+  status: string;
+  created_at: string;
+  url: string;
+}

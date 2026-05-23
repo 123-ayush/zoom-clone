@@ -1,5 +1,12 @@
-from datetime import datetime
-from pydantic import BaseModel
+from datetime import datetime, timezone
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.time_utils import UtcDateTime
+
+
+# --- Responses -------------------------------------------------------------
 
 
 class ParticipantResponse(BaseModel):
@@ -10,10 +17,10 @@ class ParticipantResponse(BaseModel):
     role: str
     is_muted: bool
     is_video_off: bool
-    joined_at: datetime
-    left_at: datetime | None
+    joined_at: UtcDateTime
+    left_at: UtcDateTime | None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MeetingResponse(BaseModel):
@@ -24,15 +31,15 @@ class MeetingResponse(BaseModel):
     host_id: int
     type: str
     status: str
-    scheduled_at: datetime | None
+    scheduled_at: UtcDateTime | None
     duration_mins: int
     invite_link: str
-    started_at: datetime | None
-    ended_at: datetime | None
-    created_at: datetime
+    started_at: UtcDateTime | None
+    ended_at: UtcDateTime | None
+    created_at: UtcDateTime
     participant_count: int = 0
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MeetingListResponse(BaseModel):
@@ -40,25 +47,43 @@ class MeetingListResponse(BaseModel):
     recent: list[MeetingResponse]
 
 
-class CreateInstantMeetingRequest(BaseModel):
-    host_name: str = "Default User"
+class JoinMeetingResponse(BaseModel):
+    meeting: MeetingResponse
+    participant: ParticipantResponse
+
+
+class MuteAllResponse(BaseModel):
+    updated_count: int
+
+
+# --- Requests --------------------------------------------------------------
 
 
 class CreateScheduledMeetingRequest(BaseModel):
-    title: str
-    description: str | None = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
     scheduled_at: datetime
-    duration_mins: int = 60
-    host_name: str = "Default User"
+    duration_mins: int = Field(default=60, ge=1, le=1440)
+
+    @field_validator("scheduled_at")
+    @classmethod
+    def _must_be_future(cls, v: datetime) -> datetime:
+        aware = v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+        if aware <= datetime.now(timezone.utc):
+            raise ValueError("scheduled_at must be in the future")
+        return v
 
 
 class UpdateMeetingStatusRequest(BaseModel):
-    status: str
+    status: Literal["waiting", "active", "ended"]
 
 
 class JoinMeetingRequest(BaseModel):
-    display_name: str
-    user_id: int | None = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    display_name: str = Field(min_length=1, max_length=100)
 
 
 class MuteParticipantRequest(BaseModel):
@@ -71,12 +96,3 @@ class MuteVideoRequest(BaseModel):
 
 class MuteAllRequest(BaseModel):
     is_muted: bool = True
-
-
-class JoinMeetingResponse(BaseModel):
-    meeting: MeetingResponse
-    participant: ParticipantResponse
-
-
-class MuteAllResponse(BaseModel):
-    updated_count: int

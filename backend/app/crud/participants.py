@@ -1,26 +1,37 @@
-from datetime import datetime
+import logging
+
 from sqlalchemy.orm import Session
+
 from app.models.meeting import Meeting, Participant
+from app.time_utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
-def join_meeting(db: Session, meeting: Meeting, display_name: str, user_id: int | None = None) -> Participant:
+def get_participant(db: Session, participant_id: int) -> Participant | None:
+    return db.get(Participant, participant_id)
+
+
+def join_meeting(
+    db: Session, meeting: Meeting, display_name: str, role: str = "participant"
+) -> Participant:
     if meeting.status == "ended":
-        raise ValueError("Meeting has ended")
+        raise ValueError("This meeting has ended")
 
     if meeting.status == "waiting":
         meeting.status = "active"
-        meeting.started_at = datetime.utcnow()
+        meeting.started_at = utcnow()
 
     participant = Participant(
         meeting_id=meeting.id,
-        user_id=user_id,
         display_name=display_name,
-        role="participant",
+        role=role,
     )
     db.add(participant)
     db.commit()
     db.refresh(participant)
     db.refresh(meeting)
+    logger.info("%s joined meeting %s", display_name, meeting.meeting_id)
     return participant
 
 
@@ -33,8 +44,10 @@ def get_active_participants(db: Session, meeting_db_id: int) -> list[Participant
     )
 
 
-def mute_participant(db: Session, participant_id: int, is_muted: bool) -> Participant | None:
-    p = db.query(Participant).filter(Participant.id == participant_id).first()
+def mute_participant(
+    db: Session, participant_id: int, is_muted: bool
+) -> Participant | None:
+    p = db.get(Participant, participant_id)
     if p:
         p.is_muted = is_muted
         db.commit()
@@ -42,8 +55,10 @@ def mute_participant(db: Session, participant_id: int, is_muted: bool) -> Partic
     return p
 
 
-def set_video_off(db: Session, participant_id: int, is_video_off: bool) -> Participant | None:
-    p = db.query(Participant).filter(Participant.id == participant_id).first()
+def set_video_off(
+    db: Session, participant_id: int, is_video_off: bool
+) -> Participant | None:
+    p = db.get(Participant, participant_id)
     if p:
         p.is_video_off = is_video_off
         db.commit()
@@ -52,7 +67,7 @@ def set_video_off(db: Session, participant_id: int, is_video_off: bool) -> Parti
 
 
 def mute_all_participants(db: Session, meeting_db_id: int) -> int:
-    updated = (
+    targets = (
         db.query(Participant)
         .filter(
             Participant.meeting_id == meeting_db_id,
@@ -61,29 +76,33 @@ def mute_all_participants(db: Session, meeting_db_id: int) -> int:
         )
         .all()
     )
-    for p in updated:
+    for p in targets:
         p.is_muted = True
     db.commit()
-    return len(updated)
+    logger.info("Muted %d participants in meeting #%d", len(targets), meeting_db_id)
+    return len(targets)
 
 
 def remove_participant(db: Session, meeting_db_id: int, participant_id: int) -> bool:
     p = (
         db.query(Participant)
-        .filter(Participant.id == participant_id, Participant.meeting_id == meeting_db_id)
+        .filter(
+            Participant.id == participant_id,
+            Participant.meeting_id == meeting_db_id,
+        )
         .first()
     )
-    if p:
-        p.left_at = datetime.utcnow()
+    if p and p.left_at is None:
+        p.left_at = utcnow()
         db.commit()
         return True
-    return False
+    return p is not None
 
 
 def leave_meeting(db: Session, participant_id: int) -> Participant | None:
-    p = db.query(Participant).filter(Participant.id == participant_id).first()
-    if p:
-        p.left_at = datetime.utcnow()
+    p = db.get(Participant, participant_id)
+    if p and p.left_at is None:
+        p.left_at = utcnow()
         db.commit()
         db.refresh(p)
     return p

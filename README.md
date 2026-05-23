@@ -1,112 +1,157 @@
 # Zoom Clone
 
-A full-stack Zoom clone built for a programming assignment. Replicates Zoom's UI design, meeting workflows, and core functionality.
+A full-stack video-conferencing app built as a coding assignment. Real
+peer-to-peer video and audio over WebRTC, live chat, collaborative whiteboard,
+in-meeting recording with a Clips library, and a Zoom-style UI throughout.
 
 ---
 
-## Tech Stack
+## Tech stack
 
-| Layer     | Technology                         |
-|-----------|------------------------------------|
-| Frontend  | Next.js 16 (App Router), TypeScript, Tailwind CSS v4 |
-| Backend   | Python 3.14, FastAPI               |
-| Database  | SQLite via SQLAlchemy ORM          |
-| Icons     | Lucide React                       |
+| Layer | Technology |
+| --- | --- |
+| Frontend | Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · React 19 |
+| Backend | Python 3.11 · FastAPI · SQLAlchemy 2 · Alembic |
+| Real-time | WebSockets (signaling, presence, chat, whiteboard) · WebRTC P2P mesh |
+| Database | SQLite (dev) · Postgres (prod) |
+| Tests | pytest · Vitest · React Testing Library |
+| Deploy | Docker — works on Render, Railway, Fly.io · Vercel for the frontend |
 
 ---
 
 ## Features
 
-- **Landing Dashboard** — Zoom-style navbar, quick action cards, upcoming and recent meetings sections
-- **Instant Meeting** — One-click meeting creation with auto-generated meeting ID and shareable invite link
-- **Join Meeting** — Join by meeting ID or invite link, display name entry before joining
-- **Schedule Meetings** — Form with title, description, date/time picker, duration; appears in Upcoming section
-- **Meeting Room** — Live camera feed (via `getUserMedia`), participant tiles, mute/video toggle
-- **Host Controls** — Mute All, remove individual participants, end meeting for all
-- **Responsive Design** — Works on mobile (375px), tablet, and desktop
+- **Landing dashboard** — Quick actions, upcoming meetings, recent meetings.
+- **Instant meetings** — One click creates a meeting with a shareable invite link.
+- **Schedule meetings** — Title, description, date/time picker, duration; appears
+  under Upcoming.
+- **Join by ID** — 11-digit meeting ID, display-name prompt before entering.
+- **Real video and audio** — WebRTC peer-to-peer mesh with STUN. No simulated
+  participant tiles.
+- **Live chat** — Persisted to the database; history replays for late joiners.
+- **Screen share** — `getDisplayMedia` + `replaceTrack`, with a visible indicator.
+- **Collaborative whiteboard** — Multi-color pen, eraser, clear, snapshot sync.
+- **Recording** — Client-side `MediaRecorder` uploads to the backend; appears in
+  the **Clips** library with play / download / delete.
+- **Host controls** — Mute all (broadcast `force-mute`), remove participant
+  (closes their socket).
+- **Production-ready edges** — error boundaries, WS reconnect with exponential
+  backoff, permission-denied UX, timezone-aware datetimes, structured logging,
+  input validation, automated tests.
 
 ---
 
-## Local Setup
-
-### Prerequisites
-
-- Python 3.10+ (tested on 3.14)
-- Node.js 18+ and npm
-
-### 1. Backend
+## Quick start (Docker)
 
 ```bash
-cd backend
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-python -m app.seed          # seeds the SQLite database with sample data
-uvicorn app.main:app --reload --port 8000
+docker compose up --build
 ```
 
-API docs available at: http://localhost:8000/docs
+- API: <http://localhost:8000> · API docs: <http://localhost:8000/docs>
+- Seed demo data: `docker compose exec backend python -m app.seed`
 
-### 2. Frontend
+Then in another shell:
 
 ```bash
 cd frontend
-npm install
-cp .env.local.example .env.local   # or create .env.local manually (see below)
-npm run dev
+cp .env.local.example .env.local
+pnpm install
+pnpm dev
 ```
 
-Open http://localhost:3000
+Open <http://localhost:3000>.
 
-### Frontend Environment Variables
+> Without Docker the backend needs Python **3.11** specifically (3.12+ has broken
+> `pydantic-core` wheels on Windows). See [docs/deployment.md](docs/deployment.md)
+> for the non-Docker path.
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
+---
+
+## Project layout
+
 ```
-
-### Backend Environment Variables (`.env`)
-
-```env
-FRONTEND_URL=http://localhost:3000
-ALLOWED_ORIGINS=http://localhost:3000
+zoom-clone/
+├── backend/                 FastAPI app
+│   ├── app/
+│   │   ├── config.py         pydantic-settings — every env var
+│   │   ├── database.py       SQLAlchemy engine (env-driven SQLite/Postgres)
+│   │   ├── dependencies.py   get_current_user — the only place "demo user" lives
+│   │   ├── time_utils.py     utcnow(), UtcDateTime serializer
+│   │   ├── models/           User, Meeting, Participant, ChatMessage, Recording
+│   │   ├── schemas/          Pydantic request/response models with validation
+│   │   ├── crud/             database operations
+│   │   ├── routers/          REST endpoints
+│   │   ├── ws/               WebSocket router + in-memory RoomManager
+│   │   └── seed.py           idempotent demo data
+│   ├── alembic/              migrations
+│   └── tests/                pytest
+├── frontend/                Next.js 16 App Router
+│   ├── src/
+│   │   ├── app/              routes — /, /join, /schedule, /meeting/[id], /clips
+│   │   ├── components/       UI (meeting/, dashboard/, modals/, layout/, ui/)
+│   │   ├── context/          UserContext (single implicit user)
+│   │   ├── hooks/            useWebSocket, useWebRTC, useChat, useRecording, useMeeting
+│   │   ├── lib/              api.ts (REST), ws.ts (WS message catalog), utils.ts
+│   │   └── types/            shared TypeScript types
+│   └── tests/                Vitest
+├── docs/                    architecture, deployment, API, schema, decisions
+├── docker-compose.yml
+└── .github/workflows/ci.yml
 ```
 
 ---
 
-## Database Schema
+## Configuration
 
-### `users`
-Stores the default logged-in user. Seeded with one row (id=1).
-
-### `meetings`
-Single table for both instant and scheduled meetings, distinguished by a `type` column (`instant` / `scheduled`). Uses a human-readable `meeting_id` (e.g. `abc-def0-1234`) as the URL key, separate from the integer primary key used for foreign keys.
-
-### `participants`
-Tracks every join event. `user_id` is nullable to support guest joins (name-only). Mute/video state persists to the DB so host controls are real. `left_at` records departure time for duration calculation.
+Every backend setting lives in `backend/app/config.py` and reads from environment
+variables — see [backend/.env.example](backend/.env.example) and
+[frontend/.env.local.example](frontend/.env.local.example). The full list is
+documented in [docs/deployment.md](docs/deployment.md).
 
 ---
 
-## Assumptions
+## Documentation
 
-- **No real authentication** — a single default user (id=1) is always considered logged in.
-- **No WebRTC peer-to-peer** — the local user's camera is shown via `getUserMedia`. Other participant tiles are simulated avatar cards (colored by name hash). This keeps deployment simple with no signaling server.
-- **Polling instead of WebSockets** — the meeting room polls `GET /api/meetings/{id}/participants` every 3 seconds to sync mute state.
-- **SQLite** — stored at `backend/zoom_clone.db`. Not suitable for concurrent multi-user production use; intended for this assignment.
+- [docs/architecture.md](docs/architecture.md) — System overview, WebRTC mesh,
+  WebSockets, scaling limits, no-TURN caveat.
+- [docs/api.md](docs/api.md) — REST endpoints and the full WebSocket message
+  catalog.
+- [docs/database.md](docs/database.md) — Schema and relationships.
+- [docs/deployment.md](docs/deployment.md) — Docker, Vercel, env vars, platform
+  notes.
+- [docs/decisions.md](docs/decisions.md) — Architecture Decision Records
+  explaining every non-obvious choice.
 
 ---
 
-## Deployment
+## Tests
 
-| Service  | Target  | Notes                                      |
-|----------|---------|--------------------------------------------|
-| Frontend | Vercel  | Set `NEXT_PUBLIC_API_URL` to backend URL   |
-| Backend  | Render  | Add `Procfile` with `web: uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+```bash
+# Backend
+cd backend
+pip install -r requirements-dev.txt
+ruff check .
+pytest
 
-Set `ALLOWED_ORIGINS` on Render to your Vercel deployment URL.
+# Frontend
+cd frontend
+pnpm install
+pnpm lint
+pnpm test --run
+pnpm build
+```
+
+CI (`.github/workflows/ci.yml`) runs all of the above on every push and PR.
+
+---
+
+## Known limitations
+
+- **No TURN.** Strict / symmetric NAT users may fail to connect. Adding a
+  hosted TURN service is a one-env-var change — see ADR-2.
+- **Single-instance backend.** The WebSocket `RoomManager` is in-memory.
+  Horizontal scaling requires a pub/sub layer (Redis) that we have not built.
+- **Mesh scaling.** ~4–6 participants per meeting comfortably; an SFU is the
+  production path beyond that.
+- **No authentication.** The assignment specifies "assume a default user is
+  logged in"; the whole app uses one implicit user. See ADR-3.

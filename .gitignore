@@ -5,6 +5,11 @@ backend/**/__pycache__/
 backend/**/*.pyc
 backend/zoom_clone.db
 backend/.env
+backend/recordings/
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/alembic/__pycache__/
+backend/alembic/versions/__pycache__/
 
 # Node
 frontend/node_modules/
